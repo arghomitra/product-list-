@@ -86,7 +86,8 @@ export default function Home() {
         body: tableData,
         startY: 35,
         theme: 'striped',
-        headStyles: { fillColor: [46, 58, 135] }, // Navy blue
+        headStyles: { fillColor: [46, 58, 135], font: 'PT Sans', fontStyle: 'bold' },
+        bodyStyles: { font: 'PT Sans', fontStyle: 'normal' },
         didDrawPage: (data) => {
           finalY = data.cursor?.y ?? finalY;
         }
@@ -94,6 +95,7 @@ export default function Home() {
       // @ts-ignore
       finalY = doc.lastAutoTable.finalY + 10;
     } else {
+      doc.setFont('PT Sans', 'normal');
       doc.text('No items selected.', 14, 35);
       finalY = 45;
     }
