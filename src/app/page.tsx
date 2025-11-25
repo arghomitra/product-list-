@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { FileDown, Printer, Share2, Loader2, History, Menu, Trash2 } from 'lucide-react';
+import { FileDown, Printer, Share2, Loader2, History, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AppHeader } from '@/components/header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -14,7 +14,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { suggestOrder } from '@/ai/flows/suggest-order-flow';
 import { useToast } from '@/hooks/use-toast';
 import { Quantities } from '@/hooks/use-list-store';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -66,13 +65,31 @@ export default function Home() {
 
     const doc = new jsPDF();
     
+    const svgIcon = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" class="h-6 w-6"><rect width="256" height="256" fill="none"/><path d="M32,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H40A8,8,0,0,1,32,64Zm8,64H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16Zm176,56H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z" fill="#2E3A87"/></svg>`;
+    
+    // It's tricky to directly render SVG in jsPDF. A common approach is to use a data URL.
+    // For simplicity, we'll add text and a placeholder for the logo.
+    // A more advanced implementation would use canvg to render SVG on a canvas and then add to PDF.
+    
+    await doc.addSvg(svgIcon, {
+        x: 14,
+        y: 16,
+        width: 10,
+        height: 10,
+    });
+
     doc.setFont('arial', 'bold');
     doc.setFontSize(18);
-    doc.text('ProList', 14, 22);
+    doc.text('ProList', 30, 22);
 
     doc.setFont('arial', 'normal');
     doc.setFontSize(10);
-    doc.text(`Date: ${creationDate}`, 14, 28);
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const year = today.getFullYear();
+    const formattedDate = `${day}/${month}/${year}`;
+    doc.text(`Date: ${formattedDate}`, 14, 30);
 
 
     const tableData = Object.entries(quantities)
@@ -220,7 +237,15 @@ export default function Home() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <AppHeader />
+      <AppHeader
+        isSuggestingOrder={isSuggestingOrder}
+        consentGiven={consent}
+        handleSuggestOrder={handleSuggestOrder}
+        handleClearList={handleClearList}
+        handleShare={handleShare}
+        handlePrint={handlePrint}
+        handleDownloadPdf={handleDownloadPdf}
+      />
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="flex items-center gap-4 no-print">
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline">
@@ -263,52 +288,6 @@ export default function Home() {
               Download PDF
             </Button>
           </div>
-          <div className="md:hidden ml-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleSuggestOrder} disabled={isSuggestingOrder || !consent}>
-                  {isSuggestingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
-                  Suggest Order
-                </DropdownMenuItem>
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!consent}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Clear List
-                      </DropdownMenuItem>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This action will permanently clear your current list quantities and notes.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleClearList}>Continue</AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-                <DropdownMenuItem onClick={handleShare}>
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Share
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handlePrint}>
-                  <Printer className="mr-2 h-4 w-4" />
-                  Print
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDownloadPdf}>
-                  <FileDown className="mr-2 h-4 w-4" />
-                  Download PDF
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
         </div>
         <Card className="flex-1 flex flex-col">
           <div className="no-print p-6 pt-6 hidden md:block">
@@ -322,8 +301,24 @@ export default function Home() {
           <Separator className="no-print hidden md:block" />
           <CardContent className="p-0 flex-1">
             <div id="print-area" className="flex flex-col h-full">
-              <h1 className="p-6 font-headline text-2xl font-bold hidden print:block">ProList</h1>
-              <p className="px-6 pb-2 text-sm text-muted-foreground hidden print:block">Date: {creationDate}</p>
+              <div className="hidden print:block p-6">
+                <div className="flex items-center gap-4">
+                     <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 256 256"
+                        className="h-8 w-8"
+                        >
+                        <rect width="256" height="256" fill="none" />
+                        <path
+                            d="M32,64a8,8,0,0,1,8-8H216a8,8,0,0,1,0,16H40A8,8,0,0,1,32,64Zm8,64H216a8,8,0,0,0,0-16H40a8,8,0,0,0,0,16Zm176,56H40a8,8,0,0,0,0,16H216a8,8,0,0,0,0-16Z"
+                            fill="hsl(var(--primary))"
+                        />
+                    </svg>
+                    <h1 className="font-headline text-2xl font-bold">ProList</h1>
+                </div>
+                <p className="px-6 pb-2 text-sm text-muted-foreground">Date: {creationDate}</p>
+              </div>
+
               <ScrollArea className="flex-1">
                 <div className="p-6 pt-0">
                   {isLoaded ? (
