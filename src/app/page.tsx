@@ -94,13 +94,14 @@ export default function Home() {
     const doc = await generatePdf();
     const pdfBlob = doc.output('blob');
     const pdfFile = new File([pdfBlob], 'ProList_Items.pdf', { type: 'application/pdf' });
+    
     const shareData = {
       files: [pdfFile],
       title: 'ProList Item List',
       text: 'Here is the item list I created.',
     };
 
-    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+    if (navigator.canShare && navigator.canShare(shareData)) {
       try {
         await navigator.share(shareData);
         toast({
@@ -108,15 +109,23 @@ export default function Home() {
           description: "Your item list was shared successfully.",
         });
       } catch (error) {
-        // This can happen if the user cancels the share dialog
-        console.log('Share was cancelled or failed', error);
+        // This can happen if the user cancels the share dialog.
+        // We don't need to show an error in that case.
+        if ((error as Error).name !== 'AbortError') {
+            console.error('Share failed:', error);
+            toast({
+                variant: 'destructive',
+                title: "Share Failed",
+                description: "There was an error trying to share the list.",
+            });
+        }
       }
     } else {
-      // Fallback for browsers that don't support Web Share API
+      // Fallback for browsers that don't support Web Share API for files
       doc.save('ProList_Items.pdf');
       toast({
-        title: "PDF Downloaded",
-        description: "Your browser doesn't support sharing. The PDF has been downloaded instead.",
+        title: "Share Not Supported",
+        description: "Your browser doesn't support sharing files, so the PDF has been downloaded instead.",
       });
     }
   };
