@@ -16,9 +16,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Quantities } from '@/hooks/use-list-store';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function Home() {
-  const { items, quantities, isLoaded, updateQuantity, saveOrder, pastOrders, setQuantities, clearList } = useListStore();
+  const { items, quantities, isLoaded, updateQuantity, saveOrder, pastOrders, setQuantities, clearList, notes, setNotes } = useListStore();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const { consent, giveConsent } = useCookieConsent();
@@ -38,7 +39,7 @@ export default function Home() {
 
   const handleSaveOrder = () => {
     if(!consent) return;
-    const selectedItems = Object.keys(quantities).length > 0;
+    const selectedItems = Object.keys(quantities).length > 0 || (notes && notes.trim().length > 0);
     if (selectedItems) {
       saveOrder();
       toast({
@@ -49,7 +50,7 @@ export default function Home() {
       toast({
         variant: "destructive",
         title: "Cannot Save Empty List",
-        description: "Add items to your list before saving an order.",
+        description: "Add items or notes to your list before saving an order.",
       });
     }
   };
@@ -77,6 +78,8 @@ export default function Home() {
       })
       .filter((row): row is [string, number] => row !== null);
 
+    let finalY = 35;
+
     if (tableData.length > 0) {
       autoTable(doc, {
         head: [['Item', 'Quantity']],
@@ -84,9 +87,27 @@ export default function Home() {
         startY: 35,
         theme: 'striped',
         headStyles: { fillColor: [46, 58, 135] }, // Navy blue
+        didDrawPage: (data) => {
+          finalY = data.cursor?.y ?? finalY;
+        }
       });
+      // @ts-ignore
+      finalY = doc.lastAutoTable.finalY + 10;
     } else {
       doc.text('No items selected.', 14, 35);
+      finalY = 45;
+    }
+
+    if (notes && notes.trim()) {
+        doc.setFont('PT Sans', 'bold');
+        doc.setFontSize(12);
+        doc.text('Notes / Custom Items:', 14, finalY);
+        finalY += 7;
+
+        doc.setFont('PT Sans', 'normal');
+        doc.setFontSize(10);
+        const splitNotes = doc.splitTextToSize(notes, 180);
+        doc.text(splitNotes, 14, finalY);
     }
     
     return doc;
@@ -214,7 +235,7 @@ export default function Home() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action will permanently clear your current list quantities. This cannot be undone.
+                    This action will permanently clear your current list quantities and notes. This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -258,7 +279,7 @@ export default function Home() {
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will permanently clear your current list quantities. This cannot be undone.
+                            This action will permanently clear your current list quantities and notes. This cannot be undone.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -283,7 +304,7 @@ export default function Home() {
             </DropdownMenu>
           </div>
         </div>
-        <Card className="flex-1">
+        <Card className="flex-1 flex flex-col">
           <div className="no-print p-6 pt-6 hidden md:block">
             <Input
               placeholder="Search items..."
@@ -293,11 +314,11 @@ export default function Home() {
             />
           </div>
           <Separator className="no-print hidden md:block" />
-          <CardContent className="p-0">
-            <div id="print-area">
+          <CardContent className="p-0 flex-1">
+            <div id="print-area" className="flex flex-col h-full">
               <h1 className="p-6 font-headline text-2xl font-bold hidden print:block">ProList</h1>
               <p className="px-6 pb-2 text-sm text-muted-foreground hidden print:block">Date: {creationDate}</p>
-              <ScrollArea className="h-[65vh]">
+              <ScrollArea className="flex-1">
                 <div className="p-6 pt-0">
                   {isLoaded ? (
                     filteredItems.length > 0 ? (
@@ -324,10 +345,31 @@ export default function Home() {
                 </div>
               </ScrollArea>
               <div className="p-6 hidden print:block">
+                 {notes && notes.trim() && (
+                  <div className="pt-4">
+                      <h2 className="text-lg font-bold">Notes / Custom Items:</h2>
+                      <p className="whitespace-pre-wrap">{notes}</p>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
+
+        <Card className="no-print">
+          <CardHeader>
+            <CardTitle>Notes / Custom Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              placeholder="Add any extra items or notes for your order here."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={4}
+            />
+          </CardContent>
+        </Card>
+
       </main>
 
       {consent === false && (

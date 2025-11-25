@@ -16,18 +16,20 @@ export type PastOrderItem = {
 export type PastOrder = {
   date: string;
   items: PastOrderItem[];
+  notes?: string;
 };
 
 type StoredData = {
-  items: Item[];
   quantities: Quantities;
   pastOrders: PastOrder[];
+  notes: string;
 };
 
 export function useListStore() {
   const [items, setItems] = useState<Item[]>([]);
   const [quantities, setQuantities] = useState<Quantities>({});
   const [pastOrders, setPastOrders] = useState<PastOrder[]>([]);
+  const [notes, setNotes] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   const { consent } = useCookieConsent();
   
@@ -70,6 +72,7 @@ export function useListStore() {
           
           if (storedData.quantities) setQuantities(storedData.quantities);
           if (storedData.pastOrders) setPastOrders(storedData.pastOrders);
+          if (storedData.notes) setNotes(storedData.notes);
           loadedData = true;
         }
       } catch (error) {
@@ -81,6 +84,7 @@ export function useListStore() {
       // If consent is denied or no cookie, reset to default state
       setQuantities({});
       setPastOrders([]);
+      setNotes('');
     }
     setIsLoaded(true);
   }, [consent, items]);
@@ -90,8 +94,7 @@ export function useListStore() {
     // Only save if data has been loaded and consent is granted.
     if (isLoaded && consent) {
       try {
-        // We only store user-generated data, not the item list itself
-        const dataToStore = { quantities, pastOrders };
+        const dataToStore = { quantities, pastOrders, notes };
         const dataString = JSON.stringify(dataToStore);
         const expires = new Date();
         expires.setDate(expires.getDate() + 365); // 1 year expiry
@@ -100,7 +103,7 @@ export function useListStore() {
         console.error('Failed to save data to cookies', error);
       }
     }
-  }, [quantities, pastOrders, isLoaded, consent]);
+  }, [quantities, pastOrders, notes, isLoaded, consent]);
 
   const updateQuantity = useCallback((itemId: string, quantity: number) => {
     setQuantities(prev => {
@@ -130,11 +133,12 @@ export function useListStore() {
   }, []);
 
   const saveOrder = useCallback(() => {
-    if (Object.keys(quantities).length === 0 || !consent) return;
+    if ((Object.keys(quantities).length === 0 && !notes) || !consent) return;
 
     const newOrder: PastOrder = {
       date: new Date().toISOString(),
       items: Object.entries(quantities).map(([id, quantity]) => ({ id, quantity })),
+      notes: notes,
     };
 
     setPastOrders(prev => {
@@ -144,10 +148,11 @@ export function useListStore() {
       }
       return updatedOrders;
     });
-  }, [quantities, consent]);
+  }, [quantities, notes, consent]);
 
   const clearList = useCallback(() => {
     setQuantities({});
+    setNotes('');
   }, []);
 
   return {
@@ -155,6 +160,8 @@ export function useListStore() {
     quantities,
     isLoaded,
     pastOrders,
+    notes,
+    setNotes,
     updateQuantity,
     addItem,
     deleteItem,
