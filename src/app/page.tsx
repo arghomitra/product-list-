@@ -187,7 +187,7 @@ export default function Home() {
     clearList();
     toast({
       title: "List Cleared",
-      description: "All item quantities and notes have been removed.",
+      description: "All item quantities have been removed.",
     });
   };
 
@@ -214,7 +214,7 @@ export default function Home() {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action will permanently clear your current list quantities and notes. This cannot be undone.
+                    This action will permanently clear your current list quantities. This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -258,7 +258,7 @@ export default function Home() {
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will permanently clear your current list quantities and notes. This cannot be undone.
+                            This action will permanently clear your current list quantities. This cannot be undone.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -283,7 +283,7 @@ export default function Home() {
             </DropdownMenu>
           </div>
         </div>
-        <Card>
+        <Card className="flex-1">
           <div className="no-print p-6 pt-6">
             <Input
               placeholder="Search items..."
@@ -297,7 +297,7 @@ export default function Home() {
             <div id="print-area">
               <h1 className="p-6 font-headline text-2xl font-bold hidden print:block">ProList</h1>
               <p className="px-6 pb-2 text-sm text-muted-foreground hidden print:block">Date: {creationDate}</p>
-              <ScrollArea className="h-96">
+              <ScrollArea className="h-[65vh]">
                 <div className="p-6 pt-0">
                   {isLoaded ? (
                     filteredItems.length > 0 ? (
@@ -343,7 +343,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
-
-    
