@@ -101,7 +101,7 @@ export default function Home() {
     if (notes && notes.trim()) {
         doc.setFont('PT Sans', 'bold');
         doc.setFontSize(12);
-        doc.text('Notes / Custom Items:', 14, finalY);
+        doc.text('Comment:', 14, finalY);
         finalY += 7;
 
         doc.setFont('PT Sans', 'normal');
@@ -347,7 +347,7 @@ export default function Home() {
               <div className="p-6 hidden print:block">
                  {notes && notes.trim() && (
                   <div className="pt-4">
-                      <h2 className="text-lg font-bold">Notes / Custom Items:</h2>
+                      <h2 className="text-lg font-bold">Comment:</h2>
                       <p className="whitespace-pre-wrap">{notes}</p>
                   </div>
                 )}
@@ -358,7 +358,7 @@ export default function Home() {
 
         <Card className="no-print">
           <CardHeader>
-            <CardTitle>Notes / Custom Items</CardTitle>
+            <CardTitle>Comment</CardTitle>
           </CardHeader>
           <CardContent>
             <Textarea
