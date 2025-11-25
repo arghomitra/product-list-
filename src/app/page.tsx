@@ -92,11 +92,33 @@ export default function Home() {
 
   const handleShare = async () => {
     const doc = await generatePdf();
-    doc.save('ProList_Items.pdf');
-    toast({
-      title: "PDF Downloaded",
-      description: "You can now share the downloaded PDF file from your device.",
-    });
+    const pdfBlob = doc.output('blob');
+    const pdfFile = new File([pdfBlob], 'ProList_Items.pdf', { type: 'application/pdf' });
+    const shareData = {
+      files: [pdfFile],
+      title: 'ProList Item List',
+      text: 'Here is the item list I created.',
+    };
+
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+        toast({
+          title: "List Shared",
+          description: "Your item list was shared successfully.",
+        });
+      } catch (error) {
+        // This can happen if the user cancels the share dialog
+        console.log('Share was cancelled or failed', error);
+      }
+    } else {
+      // Fallback for browsers that don't support Web Share API
+      doc.save('ProList_Items.pdf');
+      toast({
+        title: "PDF Downloaded",
+        description: "Your browser doesn't support sharing. The PDF has been downloaded instead.",
+      });
+    }
   };
 
   const handleSuggestItems = async () => {
@@ -156,7 +178,7 @@ export default function Home() {
             </Button>
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="mr-2 h-4 w-4" />
-              Share as PDF
+              Share
             </Button>
             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="mr-2 h-4 w-4" />
