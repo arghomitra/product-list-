@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Item } from '@/data/items';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
+import { useToast } from './use-toast';
 
 const COOKIE_KEY = 'prolist-data';
 const MAX_PAST_ORDERS = 20;
@@ -32,6 +33,7 @@ export function useListStore() {
   const [notes, setNotes] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
   const { consent } = useCookieConsent();
+  const { toast } = useToast();
   
   // Effect to fetch initial items from Google Sheet
   useEffect(() => {
@@ -132,23 +134,36 @@ export function useListStore() {
     console.log("Items are managed via Google Sheets and cannot be deleted here.");
   }, []);
 
-  const saveOrder = useCallback(() => {
-    if ((Object.keys(quantities).length === 0 && !notes) || !consent) return;
+  const saveOrder = useCallback((isManualSave = false) => {
+    if (!consent) return;
 
-    const newOrder: PastOrder = {
-      date: new Date().toISOString(),
-      items: Object.entries(quantities).map(([id, quantity]) => ({ id, quantity })),
-      notes: notes,
-    };
+    const hasContent = (Object.keys(quantities).length > 0 || (notes && notes.trim().length > 0));
 
-    setPastOrders(prev => {
-      const updatedOrders = [newOrder, ...prev];
-      if (updatedOrders.length > MAX_PAST_ORDERS) {
-        return updatedOrders.slice(0, MAX_PAST_ORDERS);
-      }
-      return updatedOrders;
-    });
-  }, [quantities, notes, consent]);
+    if (isManualSave) {
+       toast({
+        title: "List Saved",
+        description: "Your current list has been successfully saved.",
+      });
+      return; // Just save the current state, don't create a new "past order"
+    }
+    
+    if (hasContent) {
+        const newOrder: PastOrder = {
+          date: new Date().toISOString(),
+          items: Object.entries(quantities).map(([id, quantity]) => ({ id, quantity })),
+          notes: notes,
+        };
+
+        setPastOrders(prev => {
+          const updatedOrders = [newOrder, ...prev];
+          if (updatedOrders.length > MAX_PAST_ORDERS) {
+            return updatedOrders.slice(0, MAX_PAST_ORDERS);
+          }
+          return updatedOrders;
+        });
+    }
+
+  }, [quantities, notes, consent, toast]);
 
   const clearList = useCallback(() => {
     setQuantities({});

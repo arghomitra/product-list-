@@ -212,6 +212,11 @@ export default function Home() {
     });
   };
 
+  const handleManualSave = () => {
+    if(!consent) return;
+    saveOrder(true); // pass true to indicate a manual save for the toast
+  }
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <AppHeader />
@@ -357,8 +362,9 @@ export default function Home() {
         </Card>
 
         <Card className="no-print">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Comment</CardTitle>
+            <Button onClick={handleManualSave} disabled={!consent}>Save List</Button>
           </CardHeader>
           <CardContent>
             <Textarea
