@@ -7,19 +7,23 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { FileDown, Printer, Share2, Sparkles, Loader2, ListPlus } from 'lucide-react';
+import { FileDown, Printer, Share2, Sparkles, Loader2, ListPlus, History } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AppHeader } from '@/components/header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { suggestSimilarItems } from '@/ai/flows/suggest-similar-items';
+import { suggestOrder } from '@/ai/flows/suggest-order-flow';
 import { useToast } from '@/hooks/use-toast';
+import { Quantities } from '@/hooks/use-list-store';
+
 
 export default function Home() {
-  const { items, quantities, notes, isLoaded, updateQuantity, updateNotes } = useListStore();
+  const { items, quantities, notes, isLoaded, updateQuantity, updateNotes, saveOrder, pastOrders, setQuantities } = useListStore();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
 
   const [isSuggesting, setIsSuggesting] = useState(false);
+  const [isSuggestingOrder, setIsSuggestingOrder] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const [creationDate, setCreationDate] = useState<string | null>(null);
@@ -34,7 +38,25 @@ export default function Home() {
     );
   }, [items, searchTerm]);
 
+  const handleSaveOrder = () => {
+    const selectedItems = Object.keys(quantities).length > 0;
+    if (selectedItems) {
+      saveOrder();
+      toast({
+        title: "Order Saved",
+        description: "Your current list has been saved to your order history.",
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Cannot Save Empty List",
+        description: "Add items to your list before saving an order.",
+      });
+    }
+  };
+
   const generatePdf = async () => {
+    handleSaveOrder();
     const { jsPDF } = await import('jspdf');
     const autoTable = (await import('jspdf-autotable')).default;
 
@@ -87,6 +109,7 @@ export default function Home() {
   };
 
   const handlePrint = () => {
+    handleSaveOrder();
     window.print();
   };
 
@@ -109,8 +132,6 @@ export default function Home() {
           description: "Your item list was shared successfully.",
         });
       } catch (error) {
-        // This can happen if the user cancels the share dialog.
-        // We don't need to show an error in that case.
         if ((error as Error).name !== 'AbortError') {
             console.error('Share failed:', error);
             toast({
@@ -121,7 +142,6 @@ export default function Home() {
         }
       }
     } else {
-      // Fallback for browsers that don't support Web Share API for files
       doc.save('ProList_Items.pdf');
       toast({
         title: "Share Not Supported",
@@ -159,6 +179,50 @@ export default function Home() {
       setIsSuggesting(false);
     }
   };
+
+  const handleSuggestOrder = async () => {
+    if (pastOrders.length < 15) {
+      toast({
+        variant: 'destructive',
+        title: 'Not Enough Data',
+        description: `Need at least 15 past orders to suggest a new one. You have ${pastOrders.length}.`,
+      });
+      return;
+    }
+    setIsSuggestingOrder(true);
+    try {
+      const ordersToSuggestFrom = pastOrders.slice(0, 15).map(order => ({
+        ...order,
+        items: order.items.map(item => ({...item, name: items.find(i => i.id === item.id)?.name || 'Unknown Item' }))
+      }));
+
+      const result = await suggestOrder({ pastOrders: ordersToSuggestFrom });
+      
+      const newQuantities: Quantities = {};
+      result.suggestedOrder.forEach(suggestedItem => {
+        const item = items.find(i => i.name.toLowerCase() === suggestedItem.name.toLowerCase());
+        if (item) {
+          newQuantities[item.id] = suggestedItem.quantity;
+        }
+      });
+      setQuantities(newQuantities);
+
+      toast({
+        title: 'Order Suggested',
+        description: 'Your item list has been updated with the AI-powered suggestion.',
+      });
+
+    } catch (error) {
+      console.error("AI order suggestion failed:", error);
+      toast({
+        variant: "destructive",
+        title: "Suggestion Failed",
+        description: "Could not suggest an order at this time. Please try again later.",
+      });
+    } finally {
+      setIsSuggestingOrder(false);
+    }
+  };
   
   const addSuggestedItem = (itemName: string) => {
     const existingItem = items.find(i => i.name.toLowerCase() === itemName.toLowerCase());
@@ -181,6 +245,10 @@ export default function Home() {
             My Item List
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
+             <Button variant="outline" size="sm" onClick={handleSuggestOrder} disabled={isSuggestingOrder}>
+              {isSuggestingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
+              Suggest Order
+            </Button>
             <Button variant="outline" size="sm" onClick={handleSuggestItems} disabled={isSuggesting}>
               {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
               Suggest Items
