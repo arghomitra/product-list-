@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useListStore } from '@/hooks/use-list-store';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -344,14 +344,18 @@ export default function Home() {
               </div>
             </div>
           </CardContent>
-          <Separator className="no-print" />
-          <CardFooter className="p-6 no-print">
-            <Textarea
-              placeholder="Add extra items or notes for the PDF here..."
-              value={notes}
-              onChange={e => updateNotes(e.target.value)}
-            />
-          </CardFooter>
+        </Card>
+        <Card className="no-print">
+            <CardHeader>
+                <CardTitle>Notes</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <Textarea
+                placeholder="Add extra items or notes for the PDF here..."
+                value={notes}
+                onChange={e => updateNotes(e.target.value)}
+                />
+            </CardContent>
         </Card>
       </main>
 
@@ -368,3 +372,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
