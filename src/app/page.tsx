@@ -220,7 +220,7 @@ export default function Home() {
       <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
         <div className="flex items-center gap-4 no-print">
           <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0 font-headline">
-            My Item List
+            Product List
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
              <Button variant="outline" size="sm" onClick={handleSuggestOrder} disabled={isSuggestingOrder || !consent}>
@@ -281,7 +281,7 @@ export default function Home() {
                         <AlertDialogHeader>
                         <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                            This action will permanently clear your current list quantities and notes. This cannot be undone.
+                            This action will permanently clear your current list quantities and notes.
                         </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
@@ -388,3 +388,5 @@ export default function Home() {
     </div>
   );
 }
+
+    
