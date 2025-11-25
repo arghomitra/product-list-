@@ -28,7 +28,11 @@ export default function Home() {
   const [creationDate, setCreationDate] = useState<string | null>(null);
 
   React.useEffect(() => {
-    setCreationDate(new Date().toLocaleDateString());
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-indexed
+    const year = today.getFullYear();
+    setCreationDate(`${day}/${month}/${year}`);
   }, []);
 
   const filteredItems = useMemo(() => {
@@ -62,11 +66,11 @@ export default function Home() {
 
     const doc = new jsPDF();
     
-    doc.setFont('PT Sans', 'bold');
+    doc.setFont('arial', 'bold');
     doc.setFontSize(18);
     doc.text('ProList', 14, 22);
 
-    doc.setFont('PT Sans', 'normal');
+    doc.setFont('arial', 'normal');
     doc.setFontSize(10);
     doc.text(`Date: ${creationDate}`, 14, 28);
 
@@ -86,8 +90,8 @@ export default function Home() {
         body: tableData,
         startY: 35,
         theme: 'striped',
-        headStyles: { fillColor: [46, 58, 135], font: 'PT Sans', fontStyle: 'bold' },
-        bodyStyles: { font: 'PT Sans', fontStyle: 'normal' },
+        headStyles: { fillColor: [46, 58, 135], font: 'arial', fontStyle: 'bold' },
+        bodyStyles: { font: 'arial', fontStyle: 'normal' },
         didDrawPage: (data) => {
           finalY = data.cursor?.y ?? finalY;
         }
@@ -95,13 +99,13 @@ export default function Home() {
       // @ts-ignore
       finalY = doc.lastAutoTable.finalY + 10;
     } else {
-      doc.setFont('PT Sans', 'normal');
+      doc.setFont('arial', 'normal');
       doc.text('No items selected.', 14, 35);
       finalY = 45;
     }
 
     if (notes && notes.trim()) {
-        doc.setFont('PT Sans', 'normal');
+        doc.setFont('arial', 'normal');
         doc.setFontSize(10);
         const splitNotes = doc.splitTextToSize(notes, 180);
         doc.text(splitNotes, 14, finalY);
@@ -388,5 +392,7 @@ export default function Home() {
     </div>
   );
 }
+
+    
 
     
