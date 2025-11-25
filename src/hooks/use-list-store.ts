@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Item, initialItems as defaultItems } from '@/data/items';
+import { Item } from '@/data/items';
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
 
 const COOKIE_KEY = 'prolist-data';
@@ -12,7 +12,7 @@ export type Quantities = { [key: string]: number };
 export type PastOrderItem = {
   id: string;
   quantity: number;
-}
+};
 export type PastOrder = {
   date: string;
   items: PastOrderItem[];
@@ -26,74 +26,85 @@ type StoredData = {
 };
 
 export function useListStore() {
-  const [items, setItems] = useState<Item[]>(defaultItems);
+  const [items, setItems] = useState<Item[]>([]);
   const [quantities, setQuantities] = useState<Quantities>({});
   const [notes, setNotes] = useState('');
   const [pastOrders, setPastOrders] = useState<PastOrder[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
   const { consent } = useCookieConsent();
+  
+  // Effect to fetch initial items from Google Sheet
+  useEffect(() => {
+    async function fetchItems() {
+      try {
+        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vTVhC7TK3cb5Q6xA9aNx6D88y4AEHt8EODrricZ79BJb1_OZ6IxJcRErCZxN69Rc0kqOR7mjHehOEW5/pub?gid=0&single=true&output=csv');
+        const csvText = await response.text();
+        const itemNames = csvText.split('\n').slice(1).map(row => row.trim()).filter(Boolean);
+        const fetchedItems: Item[] = itemNames.map((name, index) => ({
+          id: `item-${index + 1}`,
+          name,
+        }));
+        setItems(fetchedItems);
+      } catch (error) {
+        console.error("Failed to fetch items from Google Sheet", error);
+        // Fallback to empty list or some default
+        setItems([]);
+      }
+    }
+    fetchItems();
+  }, []);
+
 
   // Effect to load data from cookies once consent is given and confirmed.
   useEffect(() => {
-    if (consent === null) return; // Don't do anything until consent status is determined
+    if (consent === null || items.length === 0) return; // Don't do anything until consent is determined and items are fetched
 
+    let loadedData = false;
     if (consent) {
-        try {
-            const cookieValue = document.cookie
-                .split('; ')
-                .find(row => row.startsWith(`${COOKIE_KEY}=`));
-            
-            if (cookieValue) {
-                const storedDataJSON = decodeURIComponent(cookieValue.split('=')[1]);
-                const storedData: StoredData = JSON.parse(storedDataJSON);
-                // Ensure default items are present if cookies are old/malformed
-                const allItems = [...defaultItems];
-                const storedItemIds = new Set(allItems.map(i => i.id));
-                if (storedData.items) {
-                    storedData.items.forEach(storedItem => {
-                        if (!storedItemIds.has(storedItem.id)) {
-                            allItems.push(storedItem);
-                            storedItemIds.add(storedItem.id);
-                        }
-                    });
-                }
-                
-                setItems(allItems);
-                if (storedData.quantities) setQuantities(storedData.quantities);
-                if (storedData.notes) setNotes(storedData.notes);
-                if (storedData.pastOrders) setPastOrders(storedData.pastOrders);
-            } else {
-                setItems(defaultItems);
-            }
-        } catch (error) {
-            console.error("Failed to load data from cookies", error);
-            setItems(defaultItems);
+      try {
+        const cookieValue = document.cookie
+          .split('; ')
+          .find(row => row.startsWith(`${COOKIE_KEY}=`));
+
+        if (cookieValue) {
+          const storedDataJSON = decodeURIComponent(cookieValue.split('=')[1]);
+          const storedData: StoredData = JSON.parse(storedDataJSON);
+          
+          if (storedData.quantities) setQuantities(storedData.quantities);
+          if (storedData.notes) setNotes(storedData.notes);
+          if (storedData.pastOrders) setPastOrders(storedData.pastOrders);
+          loadedData = true;
         }
-    } else {
-        // If consent is denied, reset to default state
-        setItems(defaultItems);
-        setQuantities({});
-        setNotes('');
-        setPastOrders([]);
+      } catch (error) {
+        console.error("Failed to load data from cookies", error);
+      }
+    }
+
+    if (!consent || !loadedData) {
+      // If consent is denied or no cookie, reset to default state
+      setQuantities({});
+      setNotes('');
+      setPastOrders([]);
     }
     setIsLoaded(true);
-  }, [consent]);
+  }, [consent, items]);
 
   // Effect to save data to cookies whenever it changes.
   useEffect(() => {
     // Only save if data has been loaded and consent is granted.
     if (isLoaded && consent) {
       try {
-        const dataToStore: StoredData = { items, quantities, notes, pastOrders };
+        // We only store user-generated data, not the item list itself
+        const dataToStore = { quantities, notes, pastOrders };
         const dataString = JSON.stringify(dataToStore);
         const expires = new Date();
         expires.setDate(expires.getDate() + 365); // 1 year expiry
         document.cookie = `${COOKIE_KEY}=${encodeURIComponent(dataString)};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
       } catch (error) {
-        console.error("Failed to save data to cookies", error);
+        console.error('Failed to save data to cookies', error);
       }
     }
-  }, [items, quantities, notes, pastOrders, isLoaded, consent]);
+  }, [quantities, notes, pastOrders, isLoaded, consent]);
 
   const updateQuantity = useCallback((itemId: string, quantity: number) => {
     setQuantities(prev => {
@@ -106,7 +117,7 @@ export function useListStore() {
       return newQuantities;
     });
   }, []);
-  
+
   const setAllQuantities = useCallback((newQuantities: Quantities) => {
     setQuantities(newQuantities);
   }, []);
@@ -116,17 +127,14 @@ export function useListStore() {
   }, []);
 
   const addItem = useCallback((name: string) => {
-    const newItem = { id: `item-${Date.now()}-${Math.random()}`, name };
-    setItems(prev => [...prev, newItem]);
+    // This function is now effectively disabled as items are managed in Google Sheets.
+    // We could show a toast message to inform the user.
+    console.log("Items are managed via Google Sheets and cannot be added here.");
   }, []);
 
   const deleteItem = useCallback((itemId: string) => {
-    setItems(prev => prev.filter(item => item.id !== itemId));
-    setQuantities(prev => {
-      const newQuantities = { ...prev };
-      delete newQuantities[itemId];
-      return newQuantities;
-    });
+     // This function is now effectively disabled as items are managed in Google Sheets.
+    console.log("Items are managed via Google Sheets and cannot be deleted here.");
   }, []);
 
   const saveOrder = useCallback(() => {
