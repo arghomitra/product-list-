@@ -64,7 +64,7 @@ export default function Home() {
     
     doc.setFont('PT Sans', 'bold');
     doc.setFontSize(18);
-    doc.text('ProList - Item List', 14, 22);
+    doc.text('ProList', 14, 22);
 
     doc.setFont('PT Sans', 'normal');
     doc.setFontSize(10);
@@ -101,11 +101,6 @@ export default function Home() {
     }
 
     if (notes && notes.trim()) {
-        doc.setFont('PT Sans', 'bold');
-        doc.setFontSize(12);
-        doc.text('Comment:', 14, finalY);
-        finalY += 7;
-
         doc.setFont('PT Sans', 'normal');
         doc.setFontSize(10);
         const splitNotes = doc.splitTextToSize(notes, 180);
@@ -354,7 +349,7 @@ export default function Home() {
               <div className="p-6 hidden print:block">
                  {notes && notes.trim() && (
                   <div className="pt-4">
-                      <h2 className="text-lg font-bold">Comment:</h2>
+                      
                       <p className="whitespace-pre-wrap">{notes}</p>
                   </div>
                 )}
