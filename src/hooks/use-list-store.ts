@@ -33,29 +33,55 @@ export function useListStore() {
   const [isLoaded, setIsLoaded] = useState(false);
   const { consent } = useCookieConsent();
 
+  // Effect to load data from cookies once consent is given and confirmed.
   useEffect(() => {
+    if (consent === null) return; // Don't do anything until consent status is determined
+
     if (consent) {
         try {
-        const cookieValue = document.cookie
-            .split('; ')
-            .find(row => row.startsWith(`${COOKIE_KEY}=`));
-        
-        if (cookieValue) {
-            const storedDataJSON = decodeURIComponent(cookieValue.split('=')[1]);
-            const storedData: StoredData = JSON.parse(storedDataJSON);
-            if (storedData.items) setItems(storedData.items);
-            if (storedData.quantities) setQuantities(storedData.quantities);
-            if (storedData.notes) setNotes(storedData.notes);
-            if (storedData.pastOrders) setPastOrders(storedData.pastOrders);
-        }
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith(`${COOKIE_KEY}=`));
+            
+            if (cookieValue) {
+                const storedDataJSON = decodeURIComponent(cookieValue.split('=')[1]);
+                const storedData: StoredData = JSON.parse(storedDataJSON);
+                // Ensure default items are present if cookies are old/malformed
+                const allItems = [...defaultItems];
+                const storedItemIds = new Set(allItems.map(i => i.id));
+                if (storedData.items) {
+                    storedData.items.forEach(storedItem => {
+                        if (!storedItemIds.has(storedItem.id)) {
+                            allItems.push(storedItem);
+                            storedItemIds.add(storedItem.id);
+                        }
+                    });
+                }
+                
+                setItems(allItems);
+                if (storedData.quantities) setQuantities(storedData.quantities);
+                if (storedData.notes) setNotes(storedData.notes);
+                if (storedData.pastOrders) setPastOrders(storedData.pastOrders);
+            } else {
+                setItems(defaultItems);
+            }
         } catch (error) {
-        console.error("Failed to load data from cookies", error);
+            console.error("Failed to load data from cookies", error);
+            setItems(defaultItems);
         }
+    } else {
+        // If consent is denied, reset to default state
+        setItems(defaultItems);
+        setQuantities({});
+        setNotes('');
+        setPastOrders([]);
     }
     setIsLoaded(true);
   }, [consent]);
 
+  // Effect to save data to cookies whenever it changes.
   useEffect(() => {
+    // Only save if data has been loaded and consent is granted.
     if (isLoaded && consent) {
       try {
         const dataToStore: StoredData = { items, quantities, notes, pastOrders };
@@ -90,19 +116,9 @@ export function useListStore() {
   }, []);
 
   const addItem = useCallback((name: string) => {
-    setItems(prev => {
-      const newItem = { id: `item-${Date.now()}`, name };
-      const newItems = [...prev, newItem];
-      if(isLoaded && consent) {
-        const dataToStore: StoredData = { items: newItems, quantities, notes, pastOrders };
-        const dataString = JSON.stringify(dataToStore);
-        const expires = new Date();
-        expires.setDate(expires.getDate() + 365);
-        document.cookie = `${COOKIE_KEY}=${encodeURIComponent(dataString)};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
-      }
-      return newItems;
-    });
-  }, [consent, isLoaded, quantities, notes, pastOrders]);
+    const newItem = { id: `item-${Date.now()}-${Math.random()}`, name };
+    setItems(prev => [...prev, newItem]);
+  }, []);
 
   const deleteItem = useCallback((itemId: string) => {
     setItems(prev => prev.filter(item => item.id !== itemId));
