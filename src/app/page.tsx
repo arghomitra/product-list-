@@ -303,10 +303,6 @@ export default function Home() {
         </div>
         <Card>
           <CardHeader className="no-print">
-            <CardTitle>Items</CardTitle>
-            <CardDescription>
-              Select quantities for the items you need. Use the search box to filter.
-            </CardDescription>
             <Input
               placeholder="Search items..."
               value={searchTerm}
