@@ -26,7 +26,7 @@ export function AppHeader() {
         </div>
         <div className="flex flex-1 items-center justify-end space-x-2">
           <nav className="flex items-center">
-            <Link href="/admin" legacyBehavior passHref>
+            <Link href="/admin">
               <Button variant="ghost" size="icon" aria-label="Admin Settings">
                 <Settings className="h-5 w-5" />
               </Button>
