@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Item, initialItems as defaultItems } from '@/data/items';
+import { useCookieConsent } from '@/hooks/use-cookie-consent';
 
 const COOKIE_KEY = 'prolist-data';
 const MAX_PAST_ORDERS = 20;
@@ -30,30 +31,32 @@ export function useListStore() {
   const [notes, setNotes] = useState('');
   const [pastOrders, setPastOrders] = useState<PastOrder[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const { consent } = useCookieConsent();
 
   useEffect(() => {
-    try {
-      const cookieValue = document.cookie
-        .split('; ')
-        .find(row => row.startsWith(`${COOKIE_KEY}=`));
-      
-      if (cookieValue) {
-        const storedDataJSON = decodeURIComponent(cookieValue.split('=')[1]);
-        const storedData: StoredData = JSON.parse(storedDataJSON);
-        if (storedData.items) setItems(storedData.items);
-        if (storedData.quantities) setQuantities(storedData.quantities);
-        if (storedData.notes) setNotes(storedData.notes);
-        if (storedData.pastOrders) setPastOrders(storedData.pastOrders);
-      }
-    } catch (error) {
-      console.error("Failed to load data from cookies", error);
-    } finally {
-      setIsLoaded(true);
+    if (consent) {
+        try {
+        const cookieValue = document.cookie
+            .split('; ')
+            .find(row => row.startsWith(`${COOKIE_KEY}=`));
+        
+        if (cookieValue) {
+            const storedDataJSON = decodeURIComponent(cookieValue.split('=')[1]);
+            const storedData: StoredData = JSON.parse(storedDataJSON);
+            if (storedData.items) setItems(storedData.items);
+            if (storedData.quantities) setQuantities(storedData.quantities);
+            if (storedData.notes) setNotes(storedData.notes);
+            if (storedData.pastOrders) setPastOrders(storedData.pastOrders);
+        }
+        } catch (error) {
+        console.error("Failed to load data from cookies", error);
+        }
     }
-  }, []);
+    setIsLoaded(true);
+  }, [consent]);
 
   useEffect(() => {
-    if (isLoaded) {
+    if (isLoaded && consent) {
       try {
         const dataToStore: StoredData = { items, quantities, notes, pastOrders };
         const dataString = JSON.stringify(dataToStore);
@@ -64,7 +67,7 @@ export function useListStore() {
         console.error("Failed to save data to cookies", error);
       }
     }
-  }, [items, quantities, notes, pastOrders, isLoaded]);
+  }, [items, quantities, notes, pastOrders, isLoaded, consent]);
 
   const updateQuantity = useCallback((itemId: string, quantity: number) => {
     setQuantities(prev => {
@@ -87,11 +90,18 @@ export function useListStore() {
   }, []);
 
   const addItem = useCallback((name: string) => {
-    setItems(prev => [
-      ...prev,
-      { id: `item-${Date.now()}`, name }
-    ]);
-  }, []);
+    setItems(prev => {
+      const newItems = [...prev, { id: `item-${Date.now()}`, name }];
+      if(isLoaded && consent) {
+        const dataToStore: StoredData = { items: newItems, quantities, notes, pastOrders };
+        const dataString = JSON.stringify(dataToStore);
+        const expires = new Date();
+        expires.setDate(expires.getDate() + 365);
+        document.cookie = `${COOKIE_KEY}=${encodeURIComponent(dataString)};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+      }
+      return newItems;
+    });
+  }, [consent, isLoaded, quantities, notes, pastOrders]);
 
   const deleteItem = useCallback((itemId: string) => {
     setItems(prev => prev.filter(item => item.id !== itemId));
@@ -103,7 +113,7 @@ export function useListStore() {
   }, []);
 
   const saveOrder = useCallback(() => {
-    if (Object.keys(quantities).length === 0) return;
+    if (Object.keys(quantities).length === 0 || !consent) return;
 
     const newOrder: PastOrder = {
       date: new Date().toISOString(),
@@ -117,7 +127,7 @@ export function useListStore() {
       }
       return updatedOrders;
     });
-  }, [quantities]);
+  }, [quantities, consent]);
 
   return {
     items,

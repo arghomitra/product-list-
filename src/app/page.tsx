@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { FileDown, Printer, Share2, Sparkles, Loader2, ListPlus, History } from 'lucide-react';
+import { FileDown, Printer, Share2, Sparkles, Loader2, ListPlus, History, Menu } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AppHeader } from '@/components/header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -15,12 +15,14 @@ import { suggestSimilarItems } from '@/ai/flows/suggest-similar-items';
 import { suggestOrder } from '@/ai/flows/suggest-order-flow';
 import { useToast } from '@/hooks/use-toast';
 import { Quantities } from '@/hooks/use-list-store';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useCookieConsent } from '@/hooks/use-cookie-consent';
 
 export default function Home() {
   const { items, quantities, notes, isLoaded, updateQuantity, updateNotes, saveOrder, pastOrders, setQuantities } = useListStore();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
+  const { consent, giveConsent } = useCookieConsent();
 
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [isSuggestingOrder, setIsSuggestingOrder] = useState(false);
@@ -39,6 +41,7 @@ export default function Home() {
   }, [items, searchTerm]);
 
   const handleSaveOrder = () => {
+    if(!consent) return;
     const selectedItems = Object.keys(quantities).length > 0;
     if (selectedItems) {
       saveOrder();
@@ -245,7 +248,7 @@ export default function Home() {
             My Item List
           </h1>
           <div className="hidden items-center gap-2 md:ml-auto md:flex">
-             <Button variant="outline" size="sm" onClick={handleSuggestOrder} disabled={isSuggestingOrder}>
+             <Button variant="outline" size="sm" onClick={handleSuggestOrder} disabled={isSuggestingOrder || !consent}>
               {isSuggestingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
               Suggest Order
             </Button>
@@ -266,6 +269,37 @@ export default function Home() {
               Download PDF
             </Button>
           </div>
+          <div className="md:hidden ml-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleSuggestOrder} disabled={isSuggestingOrder || !consent}>
+                  {isSuggestingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
+                  Suggest Order
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleSuggestItems} disabled={isSuggesting}>
+                  {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                  Suggest Items
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleShare}>
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Share
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handlePrint}>
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDownloadPdf}>
+                  <FileDown className="mr-2 h-4 w-4" />
+                  Download PDF
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
         <Card>
           <CardHeader className="no-print">
@@ -277,7 +311,7 @@ export default function Home() {
               placeholder="Search items..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="max-w-sm mt-4"
+              className="max-w-sm mt-4 hidden md:block"
             />
           </CardHeader>
           <Separator className="no-print" />
@@ -359,6 +393,17 @@ export default function Home() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {consent === false && (
+        <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg no-print">
+          <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-sm text-foreground">
+              We use cookies to save your list and order history. By using the app, you consent to our use of cookies.
+            </p>
+            <Button onClick={giveConsent}>Accept</Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
