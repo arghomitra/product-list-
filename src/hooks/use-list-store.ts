@@ -91,7 +91,8 @@ export function useListStore() {
 
   const addItem = useCallback((name: string) => {
     setItems(prev => {
-      const newItems = [...prev, { id: `item-${Date.now()}`, name }];
+      const newItem = { id: `item-${Date.now()}`, name };
+      const newItems = [...prev, newItem];
       if(isLoaded && consent) {
         const dataToStore: StoredData = { items: newItems, quantities, notes, pastOrders };
         const dataString = JSON.stringify(dataToStore);
@@ -129,6 +130,11 @@ export function useListStore() {
     });
   }, [quantities, consent]);
 
+  const clearList = useCallback(() => {
+    setQuantities({});
+    setNotes('');
+  }, []);
+
   return {
     items,
     quantities,
@@ -141,5 +147,6 @@ export function useListStore() {
     deleteItem,
     saveOrder,
     setQuantities: setAllQuantities,
+    clearList,
   };
 }

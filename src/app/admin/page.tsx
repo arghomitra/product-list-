@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -109,6 +110,7 @@ export default function AdminContainer() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const router = useRouter();
 
   const handleLogin = () => {
     // In a real application, this would be a secure check against a backend.
@@ -120,6 +122,12 @@ export default function AdminContainer() {
     }
   };
 
+  const handleOpenChange = (open: boolean) => {
+    if (!open && !isAuthenticated) {
+      router.push('/');
+    }
+  };
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <AppHeader />
@@ -127,8 +135,13 @@ export default function AdminContainer() {
         {isAuthenticated ? (
           <AdminPage />
         ) : (
-          <Dialog open={true} onOpenChange={() => {}}>
-            <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()}>
+          <Dialog open={true} onOpenChange={handleOpenChange}>
+            <DialogContent className="sm:max-w-md" onInteractOutside={(e) => {
+                if (!isAuthenticated) {
+                    e.preventDefault();
+                    router.push('/');
+                }
+            }}>
               <DialogHeader>
                 <DialogTitle>Admin Access Required</DialogTitle>
                 <DialogDescription>

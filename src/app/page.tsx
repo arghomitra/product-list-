@@ -3,15 +3,15 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useListStore } from '@/hooks/use-list-store';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { FileDown, Printer, Share2, Sparkles, Loader2, ListPlus, History, Menu } from 'lucide-react';
+import { FileDown, Printer, Share2, Loader2, History, Menu, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AppHeader } from '@/components/header';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
-import { suggestSimilarItems } from '@/ai/flows/suggest-similar-items';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { suggestOrder } from '@/ai/flows/suggest-order-flow';
 import { useToast } from '@/hooks/use-toast';
 import { Quantities } from '@/hooks/use-list-store';
@@ -19,15 +19,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
 
 export default function Home() {
-  const { items, quantities, notes, isLoaded, updateQuantity, updateNotes, saveOrder, pastOrders, setQuantities } = useListStore();
+  const { items, quantities, notes, isLoaded, updateQuantity, updateNotes, saveOrder, pastOrders, setQuantities, clearList } = useListStore();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const { consent, giveConsent } = useCookieConsent();
 
-  const [isSuggesting, setIsSuggesting] = useState(false);
   const [isSuggestingOrder, setIsSuggestingOrder] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const [creationDate, setCreationDate] = useState<string | null>(null);
 
   React.useEffect(() => {
@@ -153,36 +150,6 @@ export default function Home() {
     }
   };
 
-  const handleSuggestItems = async () => {
-    setIsSuggesting(true);
-    const currentItems = Object.keys(quantities).map(id => items.find(i => i.id === id)?.name).filter(Boolean) as string[];
-    
-    if (currentItems.length === 0) {
-      toast({
-        variant: "destructive",
-        title: "No Items Selected",
-        description: "Please select some items before asking for suggestions.",
-      });
-      setIsSuggesting(false);
-      return;
-    }
-
-    try {
-      const result = await suggestSimilarItems({ items: currentItems });
-      setSuggestions(result.suggestions);
-      setIsSuggestionDialogOpen(true);
-    } catch (error) {
-      console.error("AI suggestion failed:", error);
-      toast({
-        variant: "destructive",
-        title: "Suggestion Failed",
-        description: "Could not get suggestions at this time. Please try again later.",
-      });
-    } finally {
-      setIsSuggesting(false);
-    }
-  };
-
   const handleSuggestOrder = async () => {
     if (pastOrders.length < 15) {
       toast({
@@ -227,17 +194,13 @@ export default function Home() {
     }
   };
   
-  const addSuggestedItem = (itemName: string) => {
-    const existingItem = items.find(i => i.name.toLowerCase() === itemName.toLowerCase());
-    if (existingItem) {
-        updateQuantity(existingItem.id, (quantities[existingItem.id] || 0) + 1);
-        toast({ title: "Quantity Updated", description: `Increased quantity for ${itemName}.` });
-    } else {
-        toast({ title: "Item Not Found", description: `${itemName} is not in the master list. An admin can add it.` });
-    }
-    setSuggestions(prev => prev.filter(s => s !== itemName));
+  const handleClearList = () => {
+    clearList();
+    toast({
+      title: "List Cleared",
+      description: "All item quantities and notes have been removed.",
+    });
   };
-
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -252,10 +215,25 @@ export default function Home() {
               {isSuggestingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
               Suggest Order
             </Button>
-            <Button variant="outline" size="sm" onClick={handleSuggestItems} disabled={isSuggesting}>
-              {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              Suggest Items
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={!consent}>
+                  <Trash2 className="mr-2 h-4 w-4" /> Clear List
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will permanently clear your current list quantities and notes. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleClearList}>Continue</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="mr-2 h-4 w-4" />
               Share
@@ -281,10 +259,25 @@ export default function Home() {
                   {isSuggestingOrder ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
                   Suggest Order
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSuggestItems} disabled={isSuggesting}>
-                  {isSuggesting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                  Suggest Items
-                </DropdownMenuItem>
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!consent}>
+                        <Trash2 className="mr-2 h-4 w-4" /> Clear List
+                      </DropdownMenuItem>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action will permanently clear your current list quantities and notes. This cannot be undone.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleClearList}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
                 <DropdownMenuItem onClick={handleShare}>
                   <Share2 className="mr-2 h-4 w-4" />
                   Share
@@ -302,14 +295,14 @@ export default function Home() {
           </div>
         </div>
         <Card>
-          <CardHeader className="no-print">
+          <div className="no-print p-6 pt-6">
             <Input
               placeholder="Search items..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="max-w-sm mt-4 hidden md:block"
+              className="max-w-sm mt-0 hidden md:block"
             />
-          </CardHeader>
+          </div>
           <Separator className="no-print" />
           <CardContent className="p-0">
             <div id="print-area">
@@ -361,34 +354,6 @@ export default function Home() {
           </CardFooter>
         </Card>
       </main>
-
-      <Dialog open={isSuggestionDialogOpen} onOpenChange={setIsSuggestionDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>AI Suggestions</DialogTitle>
-            <DialogDescription>
-              Here are some items you might also be interested in. Click to add them to your list.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {suggestions.length > 0 ? (
-              suggestions.map((suggestion, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span>{suggestion}</span>
-                  <Button variant="outline" size="sm" onClick={() => addSuggestedItem(suggestion)}>
-                    <ListPlus className="h-4 w-4 mr-2" /> Add
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground text-center">No new suggestions found.</p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setIsSuggestionDialogOpen(false)}>Close</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {consent === false && (
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4 shadow-lg no-print">
