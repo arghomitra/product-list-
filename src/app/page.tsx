@@ -284,15 +284,15 @@ export default function Home() {
           </div>
         </div>
         <Card className="flex-1">
-          <div className="no-print p-6 pt-6">
+          <div className="no-print p-6 pt-6 hidden md:block">
             <Input
               placeholder="Search items..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="max-w-sm mt-0 hidden md:block"
+              className="max-w-sm mt-0"
             />
           </div>
-          <Separator className="no-print" />
+          <Separator className="no-print hidden md:block" />
           <CardContent className="p-0">
             <div id="print-area">
               <h1 className="p-6 font-headline text-2xl font-bold hidden print:block">ProList</h1>
