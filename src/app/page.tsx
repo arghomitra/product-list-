@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Textarea } from '@/components/ui/textarea';
 import { FileDown, Printer, Share2, Loader2, History, Menu, Trash2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { AppHeader } from '@/components/header';
@@ -19,7 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useCookieConsent } from '@/hooks/use-cookie-consent';
 
 export default function Home() {
-  const { items, quantities, notes, isLoaded, updateQuantity, updateNotes, saveOrder, pastOrders, setQuantities, clearList } = useListStore();
+  const { items, quantities, isLoaded, updateQuantity, saveOrder, pastOrders, setQuantities, clearList } = useListStore();
   const [searchTerm, setSearchTerm] = useState('');
   const { toast } = useToast();
   const { consent, giveConsent } = useCookieConsent();
@@ -88,16 +87,6 @@ export default function Home() {
       });
     } else {
       doc.text('No items selected.', 14, 35);
-    }
-
-    const finalY = (doc as any).lastAutoTable.finalY || (tableData.length > 0 ? 35 : 45);
-
-    if (notes.trim() !== '') {
-      doc.setFontSize(12);
-      doc.text('Notes:', 14, finalY + 10);
-      doc.setFontSize(10);
-      const splitNotes = doc.splitTextToSize(notes, 180);
-      doc.text(splitNotes, 14, finalY + 16);
     }
     
     return doc;
@@ -335,27 +324,9 @@ export default function Home() {
                 </div>
               </ScrollArea>
               <div className="p-6 hidden print:block">
-                  {notes && (
-                      <>
-                        <h2 className="font-bold text-lg mb-2">Notes:</h2>
-                        <p className="whitespace-pre-wrap">{notes}</p>
-                      </>
-                  )}
               </div>
             </div>
           </CardContent>
-        </Card>
-        <Card className="no-print">
-            <CardHeader>
-                <CardTitle>Notes</CardTitle>
-            </CardHeader>
-            <CardContent>
-                <Textarea
-                placeholder="Add extra items or notes for the PDF here..."
-                value={notes}
-                onChange={e => updateNotes(e.target.value)}
-                />
-            </CardContent>
         </Card>
       </main>
 
