@@ -22,6 +22,11 @@ export default function Home() {
   const [isSuggesting, setIsSuggesting] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
+  const [creationDate, setCreationDate] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    setCreationDate(new Date().toLocaleDateString());
+  }, []);
 
   const filteredItems = useMemo(() => {
     return items.filter(item =>
@@ -29,7 +34,7 @@ export default function Home() {
     );
   }, [items, searchTerm]);
 
-  const handleDownloadPdf = async () => {
+  const generatePdf = async () => {
     const { jsPDF } = await import('jspdf');
     const autoTable = (await import('jspdf-autotable')).default;
 
@@ -38,7 +43,11 @@ export default function Home() {
     doc.setFont('PT Sans', 'bold');
     doc.setFontSize(18);
     doc.text('ProList - Item List', 14, 22);
+
     doc.setFont('PT Sans', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Date: ${creationDate}`, 14, 28);
+
 
     const tableData = Object.entries(quantities)
       .map(([itemId, quantity]) => {
@@ -51,15 +60,15 @@ export default function Home() {
       autoTable(doc, {
         head: [['Item', 'Quantity']],
         body: tableData,
-        startY: 30,
+        startY: 35,
         theme: 'striped',
         headStyles: { fillColor: [46, 58, 135] }, // Navy blue
       });
     } else {
-      doc.text('No items selected.', 14, 30);
+      doc.text('No items selected.', 14, 35);
     }
 
-    const finalY = (doc as any).lastAutoTable.finalY || (tableData.length > 0 ? 30 : 40);
+    const finalY = (doc as any).lastAutoTable.finalY || (tableData.length > 0 ? 35 : 45);
 
     if (notes.trim() !== '') {
       doc.setFontSize(12);
@@ -69,6 +78,11 @@ export default function Home() {
       doc.text(splitNotes, 14, finalY + 16);
     }
     
+    return doc;
+  };
+
+  const handleDownloadPdf = async () => {
+    const doc = await generatePdf();
     doc.save('ProList_Items.pdf');
   };
 
@@ -76,18 +90,13 @@ export default function Home() {
     window.print();
   };
 
-  const handleShare = () => {
-    const listText = Object.entries(quantities)
-      .map(([itemId, quantity]) => {
-        const item = items.find(i => i.id === itemId);
-        return item ? `${item.name} (x${quantity})` : null;
-      })
-      .filter(Boolean)
-      .join('\n');
-
-    const fullText = `Here is my list from ProList:\n\n${listText}\n\nNotes:\n${notes}`;
-    const encodedText = encodeURIComponent(fullText);
-    window.open(`https://wa.me/?text=${encodedText}`, '_blank');
+  const handleShare = async () => {
+    const doc = await generatePdf();
+    doc.save('ProList_Items.pdf');
+    toast({
+      title: "PDF Downloaded",
+      description: "You can now share the downloaded PDF file from your device.",
+    });
   };
 
   const handleSuggestItems = async () => {
@@ -147,7 +156,7 @@ export default function Home() {
             </Button>
             <Button variant="outline" size="sm" onClick={handleShare}>
               <Share2 className="mr-2 h-4 w-4" />
-              Share
+              Share as PDF
             </Button>
             <Button variant="outline" size="sm" onClick={handlePrint}>
               <Printer className="mr-2 h-4 w-4" />
@@ -176,6 +185,7 @@ export default function Home() {
           <CardContent className="p-0">
             <div id="print-area">
               <h1 className="p-6 font-headline text-2xl font-bold hidden print:block">ProList</h1>
+              <p className="px-6 pb-2 text-sm text-muted-foreground hidden print:block">Date: {creationDate}</p>
               <ScrollArea className="h-96">
                 <div className="p-6 pt-0">
                   {isLoaded ? (
